@@ -17,9 +17,14 @@ import androidx.drawerlayout.widget.DrawerLayout
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.core.view.GravityCompat
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
 import kotlinx.android.synthetic.main.activity_main.*
 
 class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener {
+
+    var firebaseAuth: FirebaseAuth? = null
+    var firebaseUser: FirebaseUser? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -35,6 +40,21 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         toggle.syncState()
 
         nav_view.setNavigationItemSelectedListener(this)
+
+        logInCheack()
+
+    }
+
+    private fun logInCheack() {
+
+        firebaseUser = FirebaseAuth.getInstance().currentUser
+        if(firebaseUser == null){
+            startActivity(Intent(this@MainActivity,SignInActivity::class.java))
+            finish()
+            return
+        }
+        //Todo ログインしている場合
+
 
     }
 
