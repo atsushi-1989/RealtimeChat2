@@ -1,8 +1,10 @@
 package jp.tominaga.atsushi.realtimechat2
 
-import android.app.Activity
+import android.app.*
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.view.*
 import android.widget.ArrayAdapter
@@ -20,6 +22,7 @@ import androidx.navigation.ui.setupWithNavController
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
+import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.GravityCompat
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -34,8 +37,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
-import com.google.firebase.database.DatabaseReference
-import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.*
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.StorageReference
 import kotlinx.android.synthetic.main.activity_main.*
@@ -64,6 +66,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         setContentView(R.layout.activity_main)
         val toolbar: Toolbar = findViewById(R.id.toolbar)
         setSupportActionBar(toolbar)
+
+        registerNotificationChannel()
 
 
 
@@ -94,6 +98,21 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             postImage()
         }
 
+    }
+
+    private fun registerNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            // Create the NotificationChannel
+            val name = "Channel1"
+            val descriptionText = "新規にメッセージがあった場合に通知を表示します"
+            val importance = NotificationManager.IMPORTANCE_DEFAULT
+            val mChannel = NotificationChannel(CHANNEL_ID, name, importance)
+            mChannel.description = descriptionText
+            // Register the channel with the system; you can't change the importance
+            // or other notification behaviors after this
+            val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.createNotificationChannel(mChannel)
+        }
     }
 
     private fun displayChatData() {
@@ -133,6 +152,57 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 }
             }
         })
+
+        firebaseReference!!.child(MY_CHAT_TBL).addChildEventListener(object :ChildEventListener{
+            override fun onCancelled(p0: DatabaseError) {
+
+
+            }
+
+            override fun onChildAdded(snapshot: DataSnapshot, previousChildName: String?) {
+
+                val newMessage = snapshot.getValue(MessageModel::class.java)
+                if(newMessage!!.userName != userName) sendNotification(newMessage)
+
+            }
+
+            override fun onChildChanged(p0: DataSnapshot, p1: String?) {
+
+            }
+
+            override fun onChildMoved(p0: DataSnapshot, p1: String?) {
+
+            }
+
+            override fun onChildRemoved(p0: DataSnapshot) {
+
+            }
+
+
+        })
+
+    }
+
+    private fun sendNotification(newMessage: MessageModel) {
+
+        val notificationId = SEND_NOTIFICATION_ID
+        val pendingIntent = PendingIntent.getActivity(
+            this@MainActivity,
+            REQUEST_PENDING_INTENT,
+            Intent(this@MainActivity,MainActivity::class.java),
+            PendingIntent.FLAG_UPDATE_CURRENT
+            )
+
+        val notificationBuilder = NotificationCompat.Builder(this@MainActivity, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_chat_black_24dp)
+            .setContentTitle(newMessage.userName)
+            .setContentText(newMessage.postedMessage)
+            .setAutoCancel(true)
+        notificationBuilder.setContentIntent(pendingIntent)
+        val notification = notificationBuilder.build()
+        notification.flags = Notification.DEFAULT_LIGHTS or Notification.FLAG_AUTO_CANCEL
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.notify(notificationId,notification)
 
     }
 
